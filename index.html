@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Luyện nghe nói tiếng Trung - HSK1/2/3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#071029; --bg2:#0b3d91; --card:#071a3a;
+    --accent:#ff7a59; --accent2:#ffd166; --glass: rgba(255,255,255,0.04);
+    --ok:#2dd4bf; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,"Noto Sans",sans-serif;
+    background: linear-gradient(135deg,var(--bg1),var(--bg2));
+    color:#e6eef8; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:28px;
+  }
+  .app{
+    width:100%; max-width:1100px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:14px; box-shadow: 0 12px 40px rgba(2,6,23,0.6); overflow:hidden;
+    display:grid; grid-template-columns: 1fr 420px; gap:20px; padding:20px;
+  }
+  header{ grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; gap:12px;}
+  h1{ margin:0; font-size:20px; letter-spacing:0.2px;}
+  .left{ padding:8px; }
+  .controls-top{ display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
+  select, input[type="checkbox"]{ padding:8px 10px; border-radius:8px; border:0; background:rgba(255,255,255,0.03); color:#e6eef8;}
+  .phrase-list{ display:flex; flex-direction:column; gap:10px; max-height:64vh; overflow:auto; padding-right:6px;}
+  .phrase{
+    background:var(--glass); border-radius:10px; padding:12px; display:flex; gap:12px; align-items:center;
+    transition:transform .12s ease, box-shadow .12s ease; cursor:pointer;
+  }
+  .phrase:hover{ transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,0.45);}
+  .phrase.active{ outline:2px solid rgba(255,255,255,0.04); box-shadow:0 12px 30px rgba(0,0,0,0.6);}
+  .han{ font-size:20px; font-weight:700; color:#fff;}
+  .pinyin{ font-size:13px; color:#dbeafe;}
+  .right{ padding:12px; border-left:1px solid rgba(255,255,255,0.03);}
+  .score-box{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:12px; border-radius:12px;}
+  .meter{ height:14px; background:rgba(255,255,255,0.04); border-radius:10px; overflow:hidden; margin-top:8px;}
+  .meter > i{ display:block; height:100%; background:linear-gradient(90deg,#7efc9f,#2dd4bf); width:0%; transition:width .6s ease;}
+  .feedback{ margin-top:12px; font-size:14px; color:#dbeafe;}
+  .char-feedback{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+  .char{ padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.03); font-weight:700;}
+  .char.correct{ background:rgba(46,204,113,0.16); color:#b7f5d6;}
+  .char.wrong{ background:rgba(255,99,71,0.12); color:#ffd6cc;}
+  .btn{
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); border:0; color:#081229; padding:10px 14px; border-radius:10px;
+    font-weight:700; cursor:pointer;
+  }
+  .btn-ghost{ background:transparent; border:1px solid rgba(255,255,255,0.06); color:#e6eef8; padding:8px 12px; border-radius:10px; cursor:pointer;}
+  .small{ font-size:13px; color:#9fb0d9;}
+  footer{ grid-column:1/-1; text-align:center; font-size:13px; color:#9fb0d9; margin-top:8px;}
+  .meta{ font-size:12px; color:#9fb0d9; margin-top:8px;}
+  @media(max-width:980px){
+    .app{ grid-template-columns:1fr; }
+    .right{ border-left:0; border-top:1px solid rgba(255,255,255,0.03); }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1>Trợ lý luyện nghe nói tiếng Trung (HSK1–3)</h1>
+    <div class="small">Nghe mẫu · Ghi âm · So sánh · Nhận xét phát âm</div>
+  </header>
+
+  <div class="left">
+    <div class="controls-top">
+      <div>
+        <label class="small" for="hskFilter"><strong>Lọc HSK</strong></label><br>
+        <select id="hskFilter">
+          <option value="ALL">Tất cả</option>
+          <option value="HSK1">HSK1</option>
+          <option value="HSK2">HSK2</option>
+          <option value="HSK3">HSK3</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="small"><strong>So sánh theo</strong></label><br>
+        <select id="compareMode">
+          <option value="han">Hán tự</option>
+          <option value="pinyin">Pinyin</option>
+        </select>
+      </div>
+
+      <div style="margin-left:auto">
+        <div class="small"><strong>Tùy chọn</strong></div>
+        <label class="small"><input type="checkbox" id="autoPlay" checked> Tự động phát mẫu khi chọn</label>
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-weight:800">Danh sách câu / từ</div>
+      <div class="small">Chọn câu để luyện</div>
+    </div>
+
+    <div class="phrase-list" id="phraseList" aria-live="polite"></div>
+  </div>
+
+  <div class="right">
+    <div class="score-box">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div id="selectedHan" class="han">—</div>
+          <div id="selectedPinyin" class="pinyin">—</div>
+          <div id="selectedVn" class="small">—</div>
+          <div id="selectedLevel" class="meta"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="small">Điểm phát âm</div>
+          <div id="scoreNum" style="font-size:28px;font-weight:800">—</div>
+        </div>
+      </div>
+
+      <div class="meter" aria-hidden="true"><i id="meterFill"></i></div>
+
+      <div style="display:flex; gap:8px; margin-top:12px; align-items:center;">
+        <button id="playBtn" class="btn">Nghe mẫu</button>
+        <button id="recordBtn" class="btn-ghost">Ghi âm</button>
+        <button id="stopBtn" class="btn-ghost" disabled>Stop</button>
+        <button id="replayBtn" class="btn-ghost" title="Phát lại transcript">Phát transcript</button>
+      </div>
+
+      <div class="feedback" id="feedback">Chưa có bài tập. Chọn một câu để bắt đầu.</div>
+      <div class="char-feedback" id="charFeedback" aria-live="polite"></div>
+    </div>
+
+    <div style="margin-top:12px; font-size:13px; color:#cfe8ff">
+      <div style="font-weight:700; margin-bottom:6px">Gợi ý cải thiện</div>
+      <ul style="margin:0 0 0 18px; padding:0; color:#bcd7ff">
+        <li>Nghe mẫu 2–3 lần, chú ý thanh điệu.</li>
+        <li>Đọc chậm, rõ ràng, tách từng âm tiết nếu cần.</li>
+        <li>Luyện lại các âm/syllable bị sai theo feedback.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>Demo — mở rộng dữ liệu HSK hoặc tích hợp API chấm phát âm để nâng cao độ chính xác</footer>
+</div>
+
+<script>
+/* -------------------------
+   Dữ liệu mẫu (HSK1-3)
+   Mỗi mục: han, pinyin, vn, level
+   Bạn có thể mở rộng danh sách này bằng file JSON lớn hơn
+   ------------------------- */
+const phrases = [
+  // HSK1 (mẫu)
+  {han:"你好", pinyin:"nǐ hǎo", vn:"Xin chào", level:"HSK1"},
+  {han:"谢谢", pinyin:"xièxie", vn:"Cảm ơn", level:"HSK1"},
+  {han:"对不起", pinyin:"duìbuqǐ", vn:"Xin lỗi", level:"HSK1"},
+  {han:"我", pinyin:"wǒ", vn:"Tôi", level:"HSK1"},
+  {han:"你", pinyin:"nǐ", vn:"Bạn", level:"HSK1"},
+  {han:"是", pinyin:"shì", vn:"Là", level:"HSK1"},
+  {han:"有", pinyin:"yǒu", vn:"Có", level:"HSK1"},
+  {han:"没有", pinyin:"méiyǒu", vn:"Không có", level:"HSK1"},
+  {han:"请", pinyin:"qǐng", vn:"Xin mời", level:"HSK1"},
+  {han:"再见", pinyin:"zàijiàn", vn:"Tạm biệt", level:"HSK1"},
+
+  // HSK2 (mẫu)
+  {han:"我想学中文", pinyin:"wǒ xiǎng xué zhōngwén", vn:"Tôi muốn học tiếng Trung", level:"HSK2"},
+  {han:"请问厕所在哪里", pinyin:"qǐngwèn cèsuǒ zài nǎlǐ", vn:"Nhà vệ sinh ở đâu", level:"HSK2"},
+  {han:"你会说英语吗", pinyin:"nǐ huì shuō yīngyǔ ma", vn:"Bạn có nói tiếng Anh không?", level:"HSK2"},
+  {han:"我喜欢看电影", pinyin:"wǒ xǐhuan kàn diànyǐng", vn:"Tôi thích xem phim", level:"HSK2"},
+  {han:"今天几号", pinyin:"jīntiān jǐ hào", vn:"Hôm nay là ngày mấy", level:"HSK2"},
+
+  // HSK3 (mẫu)
+  {han:"我喜欢吃饺子", pinyin:"wǒ xǐhuan chī jiǎozi", vn:"Tôi thích ăn há cảo", level:"HSK3"},
+  {han:"你觉得这个怎么样", pinyin:"nǐ juéde zhège zěnmeyàng", vn:"Bạn thấy cái này thế nào", level:"HSK3"},
+  {han:"我每天早上跑步", pinyin:"wǒ měitiān zǎoshang pǎobù", vn:"Tôi chạy bộ mỗi sáng", level:"HSK3"},
+  {han:"请把门关上", pinyin:"qǐng bǎ mén guān shàng", vn:"Làm ơn đóng cửa lại", level:"HSK3"},
+  {han:"我已经吃过了", pinyin:"wǒ yǐjīng chī guò le", vn:"Tôi đã ăn rồi", level:"HSK3"}
+];
+
+/* -------------------------
+   UI references
+   ------------------------- */
+const phraseList = document.getElementById('phraseList');
+const selectedHan = document.getElementById('selectedHan');
+const selectedPinyin = document.getElementById('selectedPinyin');
+const selectedVn = document.getElementById('selectedVn');
+const selectedLevel = document.getElementById('selectedLevel');
+const playBtn = document.getElementById('playBtn');
+const recordBtn = document.getElementById('recordBtn');
+const stopBtn = document.getElementById('stopBtn');
+const replayBtn = document.getElementById('replayBtn');
+const feedback = document.getElementById('feedback');
+const charFeedback = document.getElementById('charFeedback');
+const scoreNum = document.getElementById('scoreNum');
+const meterFill = document.getElementById('meterFill');
+const hskFilter = document.getElementById('hskFilter');
+const compareMode = document.getElementById('compareMode');
+const autoPlay = document.getElementById('autoPlay');
+
+let selectedIndex = 0;
+let recognition = null;
+let recognizing = false;
+let lastTranscript = '';
+let lastConfidence = 0;
+
+/* -------------------------
+   Render list with filter
+   ------------------------- */
+let currentFilter = 'ALL';
+hskFilter.onchange = () => { currentFilter = hskFilter.value; renderList(); };
+
+function renderList(){
+  phraseList.innerHTML = '';
+  phrases.forEach((p, i) => {
+    if(currentFilter !== 'ALL' && p.level !== currentFilter) return;
+    const el = document.createElement('div');
+    el.className = 'phrase' + (i===selectedIndex ? ' active' : '');
+    el.innerHTML = `<div style="flex:1">
+      <div class="han">${p.han}</div>
+      <div class="pinyin">${p.pinyin} · <span style="color:#9fb0d9">${p.vn}</span></div>
+    </div>
+    <div style="min-width:70px;text-align:right;font-size:12px;color:#9fb0d9">${p.level}</div>`;
+    el.onclick = () => { selectedIndex = i; updateSelected(); renderList(); if(autoPlay.checked) playSample(); };
+    phraseList.appendChild(el);
+  });
+}
+
+/* -------------------------
+   Update selected display
+   ------------------------- */
+function updateSelected(){
+  const p = phrases[selectedIndex];
+  selectedHan.textContent = p.han;
+  selectedPinyin.textContent = p.pinyin;
+  selectedVn.textContent = p.vn;
+  selectedLevel.textContent = 'Cấp: ' + (p.level || '—');
+  feedback.textContent = 'Nhấn "Nghe mẫu" để nghe, sau đó "Ghi âm" để thực hành.';
+  charFeedback.innerHTML = '';
+  setScore(0);
+}
+
+/* -------------------------
+   TTS (speechSynthesis)
+   ------------------------- */
+function speak(text){
+  if(!('speechSynthesis' in window)) return alert('Trình duyệt không hỗ trợ TTS.');
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'zh-CN';
+  utter.rate = 0.95;
+  utter.pitch = 1;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utter);
+}
+
+function playSample(){
+  const p = phrases[selectedIndex];
+  // ưu tiên phát Hán tự (để nghe thanh điệu), nếu compareMode là pinyin vẫn phát Hán tự
+  speak(p.han);
+}
+
+/* -------------------------
+   Levenshtein distance
+   ------------------------- */
+function levenshtein(a,b){
+  if(a===b) return 0;
+  const al=a.length, bl=b.length;
+  if(al===0) return bl;
+  if(bl===0) return al;
+  const v0 = new Array(bl+1), v1 = new Array(bl+1);
+  for(let j=0;j<=bl;j++) v0[j]=j;
+  for(let i=0;i<al;i++){
+    v1[0]=i+1;
+    for(let j=0;j<bl;j++){
+      const cost = a[i]===b[j] ? 0 : 1;
+      v1[j+1] = Math.min(v1[j]+1, v0[j+1]+1, v0[j]+cost);
+    }
+    for(let j=0;j<=bl;j++) v0[j]=v1[j];
+  }
+  return v1[bl];
+}
+
+/* -------------------------
+   Compute score
+   score = 100 * sim * confidence
+   sim = 1 - dist/maxLen
+   ------------------------- */
+function computeScore(expected, transcript, confidence){
+  expected = expected.replace(/\s+/g,'').trim().toLowerCase();
+  transcript = transcript.replace(/\s+/g,'').trim().toLowerCase();
+  const dist = levenshtein(expected, transcript);
+  const maxLen = Math.max(expected.length, transcript.length, 1);
+  const sim = Math.max(0, 1 - dist / maxLen);
+  const conf = (typeof confidence === 'number') ? confidence : 0.6;
+  const raw = sim * conf;
+  return Math.round(raw * 100);
+}
+
+/* -------------------------
+   Show per-character / per-syllable feedback
+   Nếu compareMode === 'pinyin' thì tách pinyin theo khoảng trắng
+   Nếu 'han' thì tách theo ký tự
+   ------------------------- */
+function showCharFeedback(expected, transcript){
+  charFeedback.innerHTML = '';
+  if(compareMode.value === 'pinyin'){
+    const expParts = expected.split(/\s+/).filter(Boolean);
+    const transParts = transcript.split(/\s+/).filter(Boolean);
+    for(let i=0;i<expParts.length;i++){
+      const ch = expParts[i];
+      const ok = transParts[i] && normalizePinyin(transParts[i]) === normalizePinyin(ch);
+      const span = document.createElement('div');
+      span.className = 'char ' + (ok ? 'correct' : 'wrong');
+      span.textContent = ch;
+      charFeedback.appendChild(span);
+    }
+  } else {
+    const expChars = Array.from(expected.replace(/\s+/g,''));
+    const transChars = Array.from(transcript.replace(/\s+/g,''));
+    for(let i=0;i<expChars.length;i++){
+      const ch = expChars[i];
+      const ok = transChars[i] && transChars[i] === ch;
+      const span = document.createElement('div');
+      span.className = 'char ' + (ok ? 'correct' : 'wrong');
+      span.textContent = ch;
+      charFeedback.appendChild(span);
+    }
+  }
+}
+
+/* Normalize pinyin: remove tone marks and convert ü variants to v for comparison */
+function normalizePinyin(s){
+  if(!s) return '';
+  // map tone marks to base letters
+  const toneMap = {
+    'ā':'a','á':'a','ǎ':'a','à':'a',
+    'ē':'e','é':'e','ě':'e','è':'e',
+    'ī':'i','í':'i','ǐ':'i','ì':'i',
+    'ō':'o','ó':'o','ǒ':'o','ò':'o',
+    'ū':'u','ú':'u','ǔ':'u','ù':'u',
+    'ǖ':'v','ǘ':'v','ǚ':'v','ǜ':'v',
+    'ü':'v','Ü':'v'
+  };
+  return s.toLowerCase().split('').map(ch => toneMap[ch] || ch).join('').replace(/[^a-z0-9\s]/g,'');
+}
+
+/* -------------------------
+   Update score UI
+   ------------------------- */
+function setScore(val){
+  scoreNum.textContent = val + '%';
+  meterFill.style.width = val + '%';
+  // change meter color based on value
+  if(val >= 85) meterFill.style.background = 'linear-gradient(90deg,#7efc9f,#2dd4bf)';
+  else if(val >= 70) meterFill.style.background = 'linear-gradient(90deg,#ffd166,#ffb86b)';
+  else meterFill.style.background = 'linear-gradient(90deg,#ff9a9e,#ff6b6b)';
+}
+
+/* -------------------------
+   SpeechRecognition init
+   ------------------------- */
+function initRecognition(){
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) {
+    recordBtn.disabled = true;
+    recordBtn.title = 'Trình duyệt không hỗ trợ SpeechRecognition';
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = 'zh-CN';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    recognizing = true;
+    recordBtn.textContent = 'Đang ghi...';
+    recordBtn.classList.add('btn-ghost');
+    stopBtn.disabled = false;
+    feedback.textContent = 'Đang ghi âm, hãy đọc rõ ràng...';
+  };
+  recognition.onend = () => {
+    recognizing = false;
+    recordBtn.textContent = 'Ghi âm';
+    stopBtn.disabled = true;
+  };
+  recognition.onerror = (e) => {
+    recognizing = false;
+    recordBtn.textContent = 'Ghi âm';
+    stopBtn.disabled = true;
+    feedback.textContent = 'Lỗi ghi âm: ' + (e.error || 'unknown');
+  };
+  recognition.onresult = (ev) => {
+    const res = ev.results[0][0];
+    const transcript = res.transcript || '';
+    const confidence = res.confidence || 0;
+    lastTranscript = transcript;
+    lastConfidence = confidence;
+    processResult(transcript, confidence);
+  };
+}
+
+/* -------------------------
+   Process ASR result: compare and score
+   ------------------------- */
+function processResult(transcript, confidence){
+  const p = phrases[selectedIndex];
+  let expected = (compareMode.value === 'pinyin') ? p.pinyin : p.han;
+  let trans = transcript;
+  if(compareMode.value === 'pinyin'){
+    expected = expected.replace(/\s+/g,' ').trim();
+    trans = trans.replace(/\s+/g,' ').trim();
+    // normalize both
+    expected = normalizePinyin(expected);
+    trans = normalizePinyin(trans);
+  } else {
+    expected = expected.replace(/\s+/g,'').trim();
+    trans = trans.replace(/\s+/g,'').trim();
+  }
+
+  const score = computeScore(expected, trans, confidence);
+  setScore(score);
+  showCharFeedback((compareMode.value === 'pinyin') ? p.pinyin : p.han, transcript);
+  let remark = '';
+  if(score >= 85) remark = 'Xuất sắc — phát âm rõ ràng, ngữ điệu tốt.';
+  else if(score >= 70) remark = 'Khá — một vài âm cần chỉnh.';
+  else if(score >= 50) remark = 'Trung bình — luyện lại các âm sai.';
+  else remark = 'Cần cải thiện — đọc chậm, chú ý thanh điệu và âm cuối.';
+  feedback.textContent = `Transcript: "${transcript}" · Confidence: ${Math.round(confidence*100)}% · ${remark}`;
+}
+
+/* -------------------------
+   Event handlers
+   ------------------------- */
+playBtn.onclick = () => playSample();
+
+recordBtn.onclick = () => {
+  if(!recognition) return alert('Trình duyệt không hỗ trợ SpeechRecognition. Dùng Chrome/Edge mới nhất.');
+  if(recognizing){
+    recognition.stop();
+    return;
+  }
+  try{
+    recognition.start();
+  }catch(e){
+    console.warn(e);
+  }
+};
+
+stopBtn.onclick = () => {
+  if(recognition && recognizing) recognition.stop();
+};
+
+replayBtn.onclick = () => {
+  if(!lastTranscript) return alert('Chưa có transcript để phát.');
+  // phát transcript bằng TTS (phát theo tiếng Trung)
+  speak(lastTranscript);
+};
+
+/* -------------------------
+   Init
+   ------------------------- */
+renderList();
+updateSelected();
+initRecognition();
+
+/* -------------------------
+   Gợi ý mở rộng (chú thích)
+   - Thay dataset bằng file JSON lớn hơn (HSK chính thức) để mở rộng.
+   - Để chấm chính xác hơn: tích hợp API chấm phát âm theo phoneme (ASR + phoneme scoring).
+   - Có thể lưu lịch sử, biểu đồ tiến bộ, bài tập theo chủ đề.
+   ------------------------- */
+</script>
+</body>
+</html>
